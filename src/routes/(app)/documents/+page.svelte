@@ -1,10 +1,10 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
 	import { onMount } from 'svelte';
-	import { documents } from '$lib/stores';
+	import { WEBUI_NAME, documents } from '$lib/stores';
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
@@ -21,7 +21,7 @@
 
 	let inputFiles = '';
 	let query = '';
-
+	let documentsImportInputElement: HTMLInputElement;
 	let tags = [];
 
 	let showSettingsModal = false;
@@ -147,6 +147,12 @@
 			(query === '' || doc.name.includes(query))
 	);
 </script>
+
+<svelte:head>
+	<title>
+		{`Documents | ${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
 
 {#if dragged}
 	<div
@@ -518,6 +524,7 @@
 				<div class="flex space-x-2">
 					<input
 						id="documents-import-input"
+						bind:this={documentsImportInputElement}
 						bind:files={importFiles}
 						type="file"
 						accept=".json"
@@ -552,8 +559,8 @@
 
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-						on:click={async () => {
-							document.getElementById('documents-import-input')?.click();
+						on:click={() => {
+							documentsImportInputElement.click();
 						}}
 					>
 						<div class=" self-center mr-2 font-medium">Import Documents Mapping</div>

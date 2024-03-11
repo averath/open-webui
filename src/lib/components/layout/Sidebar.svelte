@@ -16,9 +16,10 @@
 		updateChatById,
 		getAllChatTags
 	} from '$lib/apis/chats';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import { slide } from 'svelte/transition';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import Tooltip from '../common/Tooltip.svelte';
 
 	let show = false;
 	let navElement;
@@ -31,9 +32,10 @@
 	let chatTitle = '';
 
 	let showDropdown = false;
+	let isEditing = false;
 
 	onMount(async () => {
-		if (window.innerWidth > 1280) {
+		if (window.innerWidth > 1024) {
 			show = true;
 		}
 		await chats.set(await getChatList(localStorage.token));
@@ -59,12 +61,16 @@
 	};
 
 	const editChatTitle = async (id, _title) => {
-		title = _title;
+		if (_title === '') {
+			toast.error('Title cannot be an empty string.');
+		} else {
+			title = _title;
 
-		await updateChatById(localStorage.token, id, {
-			title: _title
-		});
-		await chats.set(await getChatList(localStorage.token));
+			await updateChatById(localStorage.token, id, {
+				title: _title
+			});
+			await chats.set(await getChatList(localStorage.token));
+		}
 	};
 
 	const deleteChat = async (id) => {
@@ -101,17 +107,16 @@
 			: 'invisible'}"
 	>
 		<div class="px-2 flex justify-center space-x-2">
-			<button
+			<a
 				id="sidebar-new-chat-button"
 				class="flex-grow flex justify-between rounded-xl px-3.5 py-2 hover:bg-gray-900 transition"
+				href="/"
 				on:click={async () => {
-					goto('/');
-
+					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
-
-					if (newChatButton) {
-						newChatButton.click();
-					}
+					setTimeout(() => {
+						newChatButton?.click();
+					}, 0);
 				}}
 			>
 				<div class="flex self-center">
@@ -141,7 +146,7 @@
 						/>
 					</svg>
 				</div>
-			</button>
+			</a>
 		</div>
 
 		{#if $user?.role === 'admin'}
@@ -366,27 +371,40 @@
 					}
 				}) as chat, i}
 					<div class=" w-full pr-2 relative">
-						<a
-							class=" w-full flex justify-between rounded-xl px-3 py-2 hover:bg-gray-900 {chat.id ===
-							$chatId
-								? 'bg-gray-900'
-								: ''} transition whitespace-nowrap text-ellipsis"
-							href="/c/{chat.id}"
-						>
-							<div class=" flex self-center flex-1 w-full">
-								<div
-									class=" text-left self-center overflow-hidden {chat.id === $chatId
-										? 'w-[160px]'
-										: 'w-full'} "
-								>
-									{#if chatTitleEditId === chat.id}
-										<input bind:value={chatTitle} class=" bg-transparent w-full" />
-									{:else}
-										{chat.title}
-									{/if}
-								</div>
+						{#if chatTitleEditId === chat.id}
+							<div
+								class=" w-full flex justify-between rounded-xl px-3 py-2 hover:bg-gray-900 {chat.id ===
+								$chatId
+									? 'bg-gray-900'
+									: ''} transition whitespace-nowrap text-ellipsis"
+							>
+								<input bind:value={chatTitle} class=" bg-transparent w-full outline-none mr-10" />
 							</div>
-						</a>
+						{:else}
+							<a
+								class=" w-full flex justify-between rounded-xl px-3 py-2 hover:bg-gray-900 {chat.id ===
+								$chatId
+									? 'bg-gray-900'
+									: ''} transition whitespace-nowrap text-ellipsis"
+								href="/c/{chat.id}"
+								on:click={() => {
+									if (window.innerWidth < 1024) {
+										show = false;
+									}
+								}}
+								draggable="false"
+							>
+								<div class=" flex self-center flex-1 w-full">
+									<div
+										class=" text-left self-center overflow-hidden {chat.id === $chatId
+											? 'w-[160px]'
+											: 'w-full'}  h-[20px]"
+									>
+										{chat.title}
+									</div>
+								</div>
+							</a>
+						{/if}
 
 						{#if chat.id === $chatId}
 							<div class=" absolute right-[22px] top-[10px]">
@@ -485,7 +503,6 @@
 											on:click={() => {
 												chatTitle = chat.title;
 												chatTitleEditId = chat.id;
-												// editChatTitle(chat.id, 'a');
 											}}
 										>
 											<svg
@@ -587,6 +604,32 @@
 										</div>
 										<div class=" self-center font-medium">Admin Panel</div>
 									</button>
+
+									<button
+										class="flex py-2.5 px-3.5 w-full hover:bg-gray-800 transition"
+										on:click={() => {
+											goto('/playground');
+											showDropdown = false;
+										}}
+									>
+										<div class=" self-center mr-3">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="1.5"
+												stroke="currentColor"
+												class="w-5 h-5"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z"
+												/>
+											</svg>
+										</div>
+										<div class=" self-center font-medium">Playground</div>
+									</button>
 								{/if}
 
 								<button
@@ -664,30 +707,32 @@
 	<div
 		class="fixed left-0 top-[50dvh] z-40 -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
 	>
-		<button
-			id="sidebar-toggle-button"
-			class=" group"
-			on:click={() => {
-				show = !show;
-			}}
-			><span class="" data-state="closed"
-				><div
-					class="flex h-[72px] w-8 items-center justify-center opacity-20 group-hover:opacity-100 transition"
-				>
-					<div class="flex h-6 w-6 flex-col items-center">
-						<div
-							class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {show
-								? 'group-hover:rotate-[15deg]'
-								: 'group-hover:rotate-[-15deg]'}"
-						/>
-						<div
-							class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {show
-								? 'group-hover:rotate-[-15deg]'
-								: 'group-hover:rotate-[15deg]'}"
-						/>
+		<Tooltip placement="right" content={`${show ? 'Close' : 'Open'} sidebar`} touch={false}>
+			<button
+				id="sidebar-toggle-button"
+				class=" group"
+				on:click={() => {
+					show = !show;
+				}}
+				><span class="" data-state="closed"
+					><div
+						class="flex h-[72px] w-8 items-center justify-center opacity-20 group-hover:opacity-100 transition"
+					>
+						<div class="flex h-6 w-6 flex-col items-center">
+							<div
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {show
+									? 'group-hover:rotate-[15deg]'
+									: 'group-hover:rotate-[-15deg]'}"
+							/>
+							<div
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {show
+									? 'group-hover:rotate-[-15deg]'
+									: 'group-hover:rotate-[15deg]'}"
+							/>
+						</div>
 					</div>
-				</div>
-			</span>
-		</button>
+				</span>
+			</button>
+		</Tooltip>
 	</div>
 </div>
